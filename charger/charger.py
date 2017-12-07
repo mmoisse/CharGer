@@ -817,6 +817,9 @@ class charger(object):
 					print( message )
 					searchBatchSize = maxSearchBatchSize
 				ent = entrezapi()
+				ent.addHeader( "tool", "charger" )
+				ent.addHeader( "email", "adamscott@wustl.edu" )
+				#ent.addHeader( "api_key", "0e31bab10e25cffbc9a461823ab53dd85209" )
 				i = 0
 				for varsStart in range( 0 , len( self.userVariants ) , int(searchBatchSize) ):
 					varsEnd = varsStart + int(searchBatchSize)
