@@ -237,7 +237,15 @@ class charger(object):
 				strALT = json.dumps( record.ALT , cls = charger.ALTEncoder , separators = ( ',' , ':' ) )
 				strINFO = json.dumps( record.INFO , cls = charger.ALTEncoder , separators = ( ',' , ':' ) ) 
 				if ( includeVCFDetails ):
-					vcfInfo = '::'.join( [ str( record.CHROM ) , str( record.POS ) , str( record.ID ) , str( record.REF ) , strALT , strINFO ] )
+					# add sample info for each record
+					samplesArray = []
+					for call in record.samples: # go through all the samples and find which samples had genoType=0/1 or 1/0 or 1/1
+						sample = call.sample
+						gtRef , gtAlt = call['GT'].split( "/" )
+						if gtRef=='1' or gtAlt=='1' :
+							samplesArray.append( sample )
+					samplesStr = '|'.join( samplesArray )
+					vcfInfo = '::'.join( [ str( record.CHROM ) , str( record.POS ) , str( record.ID ) , str( record.REF ) , strALT , strINFO , samplesStr ] ) 
 				else:
 					vcfInfo = ""
 				alti = -1
@@ -278,6 +286,8 @@ class charger(object):
 
 					hasAF = False
 					hasAF = self.getAF( info , var , alti )
+
+					# pdb.set_trace()
 
 					self.getVEPConsequences( info , var , preVEP )
 					if self.skipIfHighAF( var ):
@@ -506,6 +516,7 @@ class charger(object):
 								self.vcfKeyIndex[key] = i
 								#print str(i) + " => " + key
 								i = i + 1
+		# pdb.set_trace()
 		for i in infos.items():
 			if i[0] == 'AF':
 				print "This .vcf has AF!"
@@ -1160,7 +1171,7 @@ class charger(object):
 		return userVariants
 
 	def matchVEP( self , vepVariants ):
-		# print "Charger::matchVEP"
+		print "Charger::matchVEP"
 		currentVars = str( len( self.userVariants ) )
 		removedVars = 0
 		for var in self.userVariants: # var is a chargervariant object
@@ -1872,6 +1883,7 @@ class charger(object):
 				outFH.write( "\n" )
 			for var in self.userVariants:
 				genVar = var.vcf()
+				# pdb.set_trace()
 				#if genVar in self.filtered:
 				#	print( "skipping " + genVar + " -- " + var.proteogenomicVar() + " due to mutation-type or allele frequency filters." )
 				#	continue
