@@ -665,7 +665,7 @@ def main( argv ):
 
 	t3 = time.time() 
 
-	minimumEvidence = 2
+	minimumEvidence = 0.75
 
 	CharGer.PVS1( )
 	CharGer.PS1( )

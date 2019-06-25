@@ -1567,9 +1567,86 @@ class charger(object):
 		callImpact = "high"
 		fracMaxEntScan = 0.8
 		callGeneSplicer = ""
-		nFound = 0
+		nFound_BP4 = 0
+		nFound_PP3 = 0
+		## https://brb.nci.nih.gov/seqtools/colexpanno.html#dbnsfp
+		dbNSFP = {
+			"FATHMM": {
+				"field":"FATHMM_pred",
+				"type":"str",
+				"pathogenic":["D"],
+				"benign":["T"]},
+			"fathmm-MKL_coding": {
+				"field":"fathmm-MKL_coding_pred",
+				"type":"str",
+				"pathogenic":["D"],
+				"benign":["T"]},
+			"LRT": {
+				"field":"LRT_pred",
+				"type":"str",
+				"pathogenic":["D"],
+				"benign":["N"]},
+			"MutationTaster": {
+				"field":"MutationTaster_pred",
+				"type":"str",
+				"pathogenic":["D"],
+				"benign":["P","N"]},
+			"MutationAssessor": {
+				"field":"MutationAssessor_pred",
+				"type":"str",
+				"pathogenic":["H","M"],
+				"benign":["L","N"]},
+			"MetaSVM": {
+				"field":"MetaSVM_pred",
+				"type":"str",
+				"pathogenic":["D"],
+				"benign":["T"]},
+			"PROVEAN": {
+				"field":"PROVEAN_pred",
+				"type":"str",
+				"pathogenic":["D"],
+				"benign":["N"]},
+			"MetaLR": {
+				"field":"MetaLR_pred",
+				"type":"str",
+				"pathogenic":["D"],
+				"benign":["T"]},
+			"CADD": {
+				"field":"CADD_phred",
+				"type":"gt", # greater than
+				"pathogenic":"13.5",
+				"benign":"13.5"},
+			"DANN": {
+				"field":"DANN_score",
+				"type":"gt", # greater than
+				"pathogenic":"0.96", ## http://www.enlis.com/blog/2015/03/17/the-best-variant-prediction-method-that-no-one-is-using/
+				"benign":"0.96"},
+			"GERP++": {
+				"field":"GERP++_RS",
+				"type":"gt", # greater than
+				"pathogenic":"4.0", ## http://www.enlis.com/blog/2015/03/17/the-best-variant-prediction-method-that-no-one-is-using/
+				"benign":"4.0"}
+		}
+
+		dbscSNV = {
+			"rf": {
+				"field":"rf_score",
+				"type":"gt", # greater than
+				"pathogenic":"0.598",
+				"benign":"0.598"},
+			"ada": {
+				"field":"ada_score",
+				"type":"gt", # greater than
+				"pathogenic":"0.612",
+				"benign":"0.612"},
+		}
+
 		for var in self.userVariants:
-			case = []
+			casePathogenic = []
+			caseBenign = []
+			evidencePathogenic = []
+			evidenceBenign = []
+
 			if var.vepVariant:
 				if var.vepVariant.consequences:
 					for vcVar in var.vepVariant.consequences:
@@ -1577,63 +1654,161 @@ class charger(object):
 							evidence = 0
 							if vcVar.blosum:
 								if vcVar.blosum < callBlosum62:
-									case.append( "Blosum62:" \
+									casePathogenic.append( "Blosum62:" \
 										+ str( vcVar.blosum ) \
 										+ "<" + str( callBlosum62 ) )
-									evidence += 1
-							if vcVar.scoreSIFT and (vcVar.scoreSIFT < thresholdSIFT):
-								case.append( "SIFT:" \
-									+ str( vcVar.scoreSIFT ) \
-									+ "<" + str( thresholdSIFT ) )
-								evidence += 1
-							# elif vcVar.predictionSIFT:
-							# 	if vcVar.predictionSIFT.lower() == callSIFTdam and \
-							# 	vcVar.predictionSIFT.lower() == callSIFTdel:
-							# 		case.append( "SIFT:" \
-							# 			+ str( vcVar.predictionSIFT ) )
-							# 		evidence += 1
-							if vcVar.scorePolyphen and (vcVar.scorePolyphen > thresholdPolyphen):
-								case.append( "PolyPhen:" \
-									+ str( vcVar.scorePolyphen ) \
-									+ ">" + str( thresholdPolyphen ) )
-								evidence += 1
-							# elif vcVar.predictionPolyphen:
-							# 	if vcVar.predictionPolyphen.lower().replace( "_" , " " ) == callPolyphen:
-							# 		case.append( "PolyPhen:" \
-							# 			+ str( vcVar.predictionPolyphen ) )
-							# 		evidence += 1
+									evidencePathogenic.append('blosum')
+								else:
+									caseBenign.append( "Blosum62:" \
+										+ str( vcVar.blosum ) \
+										+ ">=" + str( callBlosum62 ) )
+									evidenceBenign.append('blosum')
+							if vcVar.scoreSIFT:
+								if (vcVar.scoreSIFT < thresholdSIFT):
+									casePathogenic.append( "SIFT:" \
+										+ str( vcVar.scoreSIFT ) \
+										+ "<" + str( thresholdSIFT ) )
+									evidencePathogenic.append('SIFT')
+								else:
+									caseBenign.append( "SIFT:" \
+										+ str( vcVar.scoreSIFT ) \
+										+ ">=" + str( thresholdSIFT ) )
+									evidenceBenign.append('SIFT')
+							if vcVar.scorePolyphen:
+								if (vcVar.scorePolyphen > thresholdPolyphen):
+									casePathogenic.append( "PolyPhen:" \
+										+ str( vcVar.scorePolyphen ) \
+										+ ">" + str( thresholdPolyphen ) )
+									evidencePathogenic.append('Polyphen')
+								else:
+									caseBenign.append( "PolyPhen:" \
+										+ str( vcVar.scorePolyphen ) \
+										+ "<=" + str( thresholdPolyphen ) )
+									evidenceBenign.append('Polyphen')
 							if vcVar.compara:
 								if vcVar.compara > callCompara:
-									case.append( "Compara:" \
+									casePathogenic.append( "Compara:" \
 										+ str( vcVar.compara ) \
 										+ ">" + str( callCompara ) )
-									evidence += 1
+									evidencePathogenic.append('Compara')
+								else:
+									caseBenign.append( "Compara:" \
+										+ str( vcVar.compara ) \
+										+ "<=" + str( callCompara ) )
+									evidenceBenign.append('Compara')
 							if vcVar.impact:
 								if vcVar.impact.lower() == callImpact:
-									case.append( "VEP_Impact:" \
+									casePathogenic.append( "VEP_Impact:" \
 										+ str( vcVar.impact ) )
-									evidence += 1
+									evidencePathogenic.append("VEP")
+								if vcVar.impact.lower() == callImpact:
+									caseBenign.append( "VEP_Impact:" \
+										+ str( vcVar.impact ) )
+									evidenceBenign.append("VEP")
 							if vcVar.maxentscan:
 								callMaxEntScan = vcVar.maxentscan[0]*fracMaxEntScan
 								if vcVar.maxentscan[1] <= callMaxEntScan:
-									case.append( "MaxEntScan:" \
+									casePathogenic.append( "MaxEntScan:" \
 										+ str( vcVar.maxentscan[1] ) \
 										+ "<=" + str( callMaxEntScan ) )
-									evidence += 1
+									evidencePathogenic.append("MaxEntScan")
+								else:
+									caseBenign.append( "MaxEntScan:" \
+										+ str( vcVar.maxentscan[1] ) \
+										+ ">" + str( callMaxEntScan ) )
+									evidenceBenign.append("MaxEntScan")
 							if vcVar.genesplicer:
 								if vcVar.genesplicer.lower() == callGeneSplicer:
-									case.append( "GeneSplicer:" \
+									casePathogenic.append( "GeneSplicer:" \
 										+ str( vcVar.genesplicer ) )
-									evidence += 1
-							if evidence >= minimumEvidence:
-								var.PP3 = True
-								nFound += 1
-								break
-				if var.PP3:
-					var.addSummary( "PP3(Multiple (>=" + str( minimumEvidence ) \
-						+ ") in silico predictions of deliterious effect=" \
-						+ "|".join( case ) + ")" )
-		print( "Found " + str( nFound ) + " variants with >= " + str( minimumEvidence ) + " of in silico evidence" )
+									evidencePathogenic.append("GeneSplicer")
+								else:
+									caseBenign.append( "GeneSplicer:" \
+										+ str( vcVar.genesplicer ) )
+									evidenceBenign.append("GeneSplicer")
+
+							# if str(var.start) == '201768947':
+							# 	import pdb; pdb.set_trace()
+							for dbNSFPfield in dbNSFP.keys():
+								db = dbNSFP.get(dbNSFPfield)
+								field = db.get("field")
+								if field in var.dbNSFP:
+									pred = var.dbNSFP.get(field)
+									if pred:
+										pred=pred.split( ";" )
+										if db.get("type") == "str":
+										   if bool(set(db.get("pathogenic")) & set(pred)):
+											   casePathogenic.append(dbNSFPfield)
+											   evidencePathogenic.append(dbNSFPfield)
+										   if bool(set(db.get("benign")) & set(pred)):
+											   evidenceBenign.append(dbNSFPfield)
+											   caseBenign.append(dbNSFPfield)
+											   evidencePathogenic.append(dbNSFPfield)
+										if db.get("type") == "gt":
+											for score in pred:
+											   if score > db.get("pathogenic"):
+												   casePathogenic.append(dbNSFPfield)
+												   evidencePathogenic.append(dbNSFPfield)
+											   elif score <= db.get("benign"):
+												   evidenceBenign.append(dbNSFPfield)
+												   caseBenign.append(dbNSFPfield)
+												   evidencePathogenic.append(dbNSFPfield)
+
+							for dbscSNVfield in dbscSNV.keys():
+								db = dbscSNV.get(dbscSNVfield)
+								field = db.get("field")
+								if field in var.dbscSNV:
+									pred = var.dbscSNV.get(field)
+									if pred:
+										pred=str(pred).split( ";" )
+										if db.get("type") == "str":
+										   if bool(set(db.get("pathogenic")) & set(pred)):
+											   casePathogenic.append(dbscSNVfield)
+											   evidencePathogenic.append(dbscSNVfield)
+										   if bool(set(db.get("benign")) & set(pred)):
+											   evidenceBenign.append(dbscSNVfield)
+											   caseBenign.append(dbscSNVfield)
+											   evidencePathogenic.append(dbscSNVfield)
+										if db.get("type") == "gt":
+											for score in pred:
+											   if float(score) > db.get("pathogenic"):
+												   casePathogenic.append(dbscSNVfield)
+												   evidencePathogenic.append(dbscSNVfield)
+											   elif float(score) <= db.get("benign"):
+												   evidenceBenign.append(dbscSNVfield)
+												   caseBenign.append(dbscSNVfield)
+												   evidencePathogenic.append(dbscSNVfield)
+
+							evidence = {ev
+									for ev in evidenceBenign
+									if ev not in evidencePathogenic}
+							evidencePathogenic = {ev
+									for ev in evidencePathogenic
+									if ev not in evidenceBenign}
+							evidenceBenign = evidence
+
+							evidence = 0
+							if len(evidencePathogenic) > 0:
+								evidence = 1.0*len(evidencePathogenic)/(len(evidencePathogenic)+len(evidenceBenign))
+								if evidence >= minimumEvidence:
+									var.PP3 = True
+									nFound_PP3 += 1
+							if len(evidenceBenign) > 0:
+								evidence = 1.0*len(evidenceBenign)/(len(evidencePathogenic)+len(evidenceBenign))
+								if evidence >= minimumEvidence:
+									var.BP4 = True
+									nFound_BP4 += 1
+							break
+				if var.PP3 or True:
+					var.addSummary( "PP3(Multiple (" + str(evidence*100) + "% >=" + str( minimumEvidence * 100) \
+						+ "%) in silico predictions of deliterious effect=" \
+						+ "|".join( casePathogenic ) + ")" )
+				if var.BP4 or True:
+					var.addSummary( "BP4(Multiple (" + str(evidence*100) + "% >=" + str( minimumEvidence * 100) \
+						+ "%) in silico predictions of benign effect=" \
+						+ "|".join( caseBenign ) + ")" )
+		print( "Found " + str( nFound_PP3 ) + " variants with >= " + str( minimumEvidence ) + " of in pathogenic silico evidence" )
+		print( "Found " + str( nFound_BP4 ) + " variants with >= " + str( minimumEvidence ) + " of in benign silico evidence" )
 
 	def PP4( self ):
 		print "CharGer module PP4: not yet implemented"
@@ -1923,84 +2098,7 @@ class charger(object):
 		print "CharGer module BP3: not yet implemented"
 		#In-frame deletions/insertions in a repetitive region without a known function
 	def BP4( self , minimumEvidence ):
-		print "CharGer module BP4"
-		print " - in silico evidence of no damage"
-		callSIFTdam = "damaging"
-		callSIFTdel = "deleterious"
-		thresholdSIFT = 0.05
-		callPolyphen = "probably_damaging"
-		thresholdPolyphen = 0.432
-		callBlosum62 = -2
-		callCompara = 2
-		callImpact = "high"
-		fracMaxEntScan = 0.8
-		callGeneSplicer = ""
-		nFound = 0
-		for var in self.userVariants:
-			case = []
-			if var.vepVariant:
-				if var.vepVariant.consequences:
-					for vcVar in var.vepVariant.consequences:
-						if not var.BP4:
-							evidence = 0
-							if vcVar.blosum:
-								if vcVar.blosum > callBlosum62:
-									case.append( "Blosum62:" \
-										+ str( vcVar.blosum ) \
-										+ ">" + str( callBlosum62 ) )
-									evidence += 1
-							if vcVar.scoreSIFT and (vcVar.scoreSIFT >= thresholdSIFT):
-								case.append( "SIFT:" \
-									+ str( vcVar.scoreSIFT ) \
-									+ ">=" + str( thresholdSIFT ) )
-								evidence += 1
-							# elif vcVar.predictionSIFT:
-							# 	if vcVar.predictionSIFT.lower() != callSIFTdam and \
-							# 	vcVar.predictionSIFT.lower() != callSIFTdel:
-							# 		case.append( "SIFT:" \
-							# 			+ str( vcVar.predictionSIFT ) )
-							# 		evidence += 1
-							if vcVar.scorePolyphen and (vcVar.scorePolyphen <= thresholdPolyphen):
-								case.append( "PolyPhen:" \
-									+ str( vcVar.scorePolyphen ) \
-									+ "<=" + str( thresholdPolyphen ) )
-								evidence += 1
-							# elif vcVar.predictionPolyphen:
-							# 	if vcVar.predictionPolyphen.lower().replace( "_" , " " ) != callPolyphen:
-							# 		case.append( "PolyPhen:" \
-							# 			+ str( vcVar.predictionPolyphen ) )
-							# 		evidence += 1
-							if vcVar.compara:
-								if vcVar.compara <= callCompara:
-									case.append( "Compara:" \
-										+ str( vcVar.compara ) )
-									evidence += 1
-							if vcVar.impact:
-								if vcVar.impact.lower() != callImpact:
-									case.append( "VEP_Impact:" \
-										+ str( vcVar.impact ) )
-									evidence += 1
-							if vcVar.maxentscan:
-								callMaxEntScan = vcVar.maxentscan[0]*fracMaxEntScan
-								if vcVar.maxentscan[1] > callMaxEntScan:
-									case.append( "MaxEntScan:" \
-										+ str( vcVar.maxentscan[1] ) \
-										+ ">" + str( callMaxEntScan ) )
-									evidence += 1
-							if vcVar.genesplicer:
-								if vcVar.genesplicer.lower() != callGeneSplicer:
-									case.append( "GeneSplicer:" \
-										+ str( vcVar.genesplicer ) )
-									evidence += 1
-							if evidence >= minimumEvidence:
-								var.BP4 = True
-								nFound += 1
-								break
-				if var.BP4:
-					var.addSummary( "BP4(Multiple (>=" + str( minimumEvidence ) \
-						+ ") in silico predictions of non-deleterious effect=" \
-						+ "|".join( case ) + ")" )
-		print( "Found " + str( nFound ) + " variants with >= " + str( minimumEvidence ) + " with in silico evidence" )
+		print "CharGer module BP4 is incormporate in PP3"
 
 	def BP5( self ):
 		print "CharGer module BP5: not yet implemented"
