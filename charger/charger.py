@@ -317,8 +317,24 @@ class charger(object):
 	def getAF( self , info , var , alti ):
 		hasAF = False
 		withAF = info.get( 'AF' , "noAF" )
+		if ( withAF == "noAF" ):
+			withAN = info.get( 'AN' , "noAN" )
+			withAC = info.get( 'AC' , "noAC" )
+			if ( withAC != "noAC" and withAN != "noAN" ):
+				ans = withAN
+				if type(withAC) is int:
+					acs = withAC
+				else:
+					acs = withAC[alti]
+				afs = acs/ans
+				var.alleleFrequency = afs
+				hasAF = True
+				# print("acs/ans " + str(afs))
 		if ( withAF != "noAF" ):
-			afs = withAF[alti]
+			if type(withAF)==type(0):
+			   afs = withAF
+			else:
+			   afs = withAF[alti]
 			var.alleleFrequency = afs
 			hasAF = True
 		return hasAF
