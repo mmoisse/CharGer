@@ -81,7 +81,7 @@ Install anaconda:
 
 Create a virtual environment:
 ```sh
-  conda create --name CharGer
+  conda create --name CharGer python=2.7 pip
 ```
 
 Switch to virtual environment:
