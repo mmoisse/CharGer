@@ -1106,6 +1106,8 @@ class charger(object):
 				#var.printVariant( "," )
 				#print( var.proteogenomicVar( ) )
 				#sys.exit() 
+				# clinvarSet[var.uid] = var
+				key=var.chromosome + ":" + str(var.start)
 				clinvarSet[var.uid] = var
 		print( "Have " + str( len( clinvarSet ) ) + " uid's from MacArthur ClinVar .tsv file: " + tsvfile )
 		return clinvarSet
@@ -1382,8 +1384,11 @@ class charger(object):
 		print( "matchClinVar!" )
 		matched = 0
 		for var in userVariants:
-			for uid in clinvarVariants:
-				cvar = clinvarVariants[uid]
+			key = var.chromosome + ":" + str(var.start)
+			val = clinvarVariants.get(key)
+			if not val:
+				continue
+			for cvar in val:
 				if var.sameGenomicVariant( cvar ):
 					matched += 1
 					var.clinical = cvar.clinical
