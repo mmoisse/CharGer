@@ -38,6 +38,7 @@ def parseArgs( argv ):
 	helpText += "  -z pathogenic variants, .vcf\n"
 	helpText += "  -e expression matrix file, .tsv\n"
 	helpText += "  --inheritanceGeneList inheritance gene list file, (format: gene\\tdisease\\tmode_of_inheritance) .txt\n"
+	helpText += "  --diseaseMechanismGeneList disease mechanism gene list file, (format: gene\\tmechanims) .txt\n"
 	helpText += "  --PP2GeneList PP2 gene list file, (format: column of genes) .txt\n"
 	helpText += "  --BP1GeneList BP1 gene list file, (format: column of genes) .txt\n"
 	helpText += "  -d diseases file, (format: gene\\tdisease\\tmode_of_inheritance) .tsv\n"
@@ -239,6 +240,7 @@ def parseArgs( argv ):
 		"run-vep" , "run-clinvar" , "run-exac" , \
 		"vepBatchSize=" , "summaryBatchSize=" , "searchBatchSize=" , \
 		"peptideChange=" , "codon=" , "alleleFrequency=" , \
+      "diseaseMechanismGeneList=", \
 		"inheritanceGeneList=" , "diseases=" , "expression=" , \
 		"PP2GeneList=" , "BP1GeneList=" , \
 		"deNovo=" , "assumedDeNovo=" , "coSegregation=" , \
@@ -309,6 +311,8 @@ def parseArgs( argv ):
 			alleleFrequencyColumn = arg
 		elif opt in ( "-g" , "--inheritanceGeneList" ):
 			inheritanceGeneListFile = arg
+		elif opt in ( "-g" , "--diseaseMechanismGeneList" ):
+			diseaseMechanismGeneListFile = arg
 		elif opt in ( "--PP2GeneList" ):
 			PP2GeneListFile = arg
 		elif opt in ( "--BP1GeneList" ):
@@ -418,6 +422,7 @@ def parseArgs( argv ):
 	"coSegregation" : coSegregationFile , \
 	"diseases" : diseasesFile , \
 	"inheritanceGeneList" : inheritanceGeneListFile , \
+	"diseaseMechanismGeneList" : diseaseMechanismGeneListFile , \
 	"PP2GeneList" : PP2GeneListFile , \
 	"BP1GeneList" : BP1GeneListFile , \
 	"chrColumn" : chrColumn, \
@@ -477,6 +482,7 @@ def main( argv ):
 	assumedDeNovoFile = values["assumedDeNovo"]
 	coSegregationFile = values["coSegregation"]
 	inheritanceGeneListFile = values["inheritanceGeneList"]
+	diseaseMechanismGeneListFile = values["diseaseMechanismGeneList"]
 	PP2GeneListFile = values["PP2GeneList"]
 	BP1GeneListFile = values["BP1GeneList"]
 	diseasesFile = values["diseases"]
@@ -559,6 +565,7 @@ def main( argv ):
 							 tsv = tsvFile , \
 							 pathogenicVariants = pathogenicVariantsFile , \
 							 inheritanceGeneList = inheritanceGeneListFile , \
+							 diseaseMechanismGeneList = diseaseMechanismGeneListFile , \
 							 PP2GeneList = PP2GeneListFile , \
 							 BP1GeneList = BP1GeneListFile , \
 							 expression = expressionFile , \
@@ -589,6 +596,7 @@ def main( argv ):
 	specific=diseaseSpecific , \
 	tcga=doTCGA , \
 	inheritanceGeneList=inheritanceGeneListFile , \
+	diseaseMechanismGeneList=diseaseMechanismGeneListFile , \
 	PP2GeneList=PP2GeneListFile , \
 	BP1GeneList=BP1GeneListFile , \
 	expression=expressionFile , \

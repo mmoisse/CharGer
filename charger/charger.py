@@ -52,6 +52,7 @@ class charger(object):
 		self.userVariants = kwargs.get( 'variants' , [] )   # (rjm) list of variants of class chargervariant
 		self.pathogenicVariants = kwargs.get( 'pathogenic' , AV({}) )
 		self.userExpression = kwargs.get( 'expressions' , AV({}) )
+		self.diseaseMechanismGeneList = kwargs.get( 'diseaseMechanismGeneList' , AV({}) )
 		self.inheritanceGeneList = kwargs.get( 'inheritanceGeneList' , AV({}) )
 		self.PP2GeneList = kwargs.get( 'PP2List' , set() )
 		self.BP1GeneList = kwargs.get( 'BP1List' , set() )
@@ -81,6 +82,7 @@ class charger(object):
 
 		self.checkInputExistence( 'pathogenicVariants' , **kwargs )
 		self.checkInputExistence( 'expression' , **kwargs )
+		self.checkInputExistence( 'diseaseMechanismGeneList' , **kwargs )
 		self.checkInputExistence( 'inheritanceGeneList' , **kwargs )
 		self.checkInputExistence( 'PP2GeneList' , **kwargs )
 		self.checkInputExistence( 'BP1GeneList' , **kwargs )
@@ -125,6 +127,7 @@ class charger(object):
 		tsvFile = kwargs.get( 'tsv' , "" )
 		pathogenicVariantsFile = kwargs.get( 'pathogenicVariants' , "" )
 		expressionFile = kwargs.get( 'expression' , "" )
+		diseaseMechanismGeneListFile = kwargs.get( 'diseaseMechanismGeneList' , "" )
 		inheritanceGeneListFile = kwargs.get( 'inheritanceGeneList' , "" )
 		PP2GeneListFile = kwargs.get( 'PP2GeneList' , "" )
 		BP1GeneListFile = kwargs.get( 'BP1GeneList' , "" )
@@ -146,6 +149,8 @@ class charger(object):
 			#exacDone=False # currently only has 1000G
 		if tsvFile:
 			exacDone = self.readTSV( tsvFile , **kwargs )
+		if diseaseMechanismGeneListFile:
+			self.readDiseaseMechanismGeneList( diseaseMechanismGeneListFile )
 		if inheritanceGeneListFile:
 			self.readModesGeneList( inheritanceGeneListFile , specific=specific )
 		else:
@@ -933,6 +938,29 @@ class charger(object):
 			inFile.close()
 		except:
 			print "CharGer::readModesGeneList Error: bad gene list file"
+
+	def readDiseaseMechanismGeneList( self , inputFile , **kwargs ): # gene list formatted "gene", "mechanism"
+		print( "CharGer::readDiseaseMechanismGeneList" )
+		try:
+			inFile = self.safeOpen( inputFile , 'r' , warning=True )
+			for line in inFile:
+				fields = line.split( "\t" )
+				gene = fields[0].rstrip()
+				# print("fields " + str(fields))
+				# print("gene " + str(gene))
+				mechanism = fields[1].rstrip().lower()
+				# print("mechanism " + str(mechanism))
+				if ( mechanism in charger.LOF_ACCEPTED ):
+					# print("LOF")
+					self.diseaseMechanismGeneList.setdefault(gene, []).append(charger.LOF)
+				if ( mechanism in charger.MISSENSE_ACCEPTED ):
+					# print("Missense")
+					self.diseaseMechanismGeneList.setdefault(gene, []).append(charger.MISSENSE)
+			inFile.close()
+		except:
+			print("CharGer::readDiseaseMechanismGeneList Error: bad gene " +
+				"list file, expected format: gene	mechanism")
+
 	def readPP2GeneList( self , inputFile , **kwargs ):
 		print( "CharGer::readPP2GeneList" )
 		try:
@@ -1651,7 +1679,6 @@ class charger(object):
 				if var.vepVariant.consequences:
 					for vcVar in var.vepVariant.consequences:
 						if not var.PP3:
-							evidence = 0
 							if vcVar.blosum:
 								if vcVar.blosum < callBlosum62:
 									casePathogenic.append( "Blosum62:" \
@@ -1845,7 +1872,13 @@ class charger(object):
 					(varVEPClass in vep_truncations) or \
 					altPeptide == "*" or \
 					altPeptide == "fs":
-				if self.inheritanceGeneList:
+				if self.diseaseMechanismGeneList:
+					if varGene in self.diseaseMechanismGeneList: # check if in gene list
+						if charger.LOF in self.diseaseMechanismGeneList[varGene]:
+							var.PVS1 = "True"
+						else:
+							var.PSC1 = "True"
+				elif self.inheritanceGeneList:
 					if varGene in self.inheritanceGeneList: # check if in gene list
 						varDisease = var.disease # no disease field in MAF; may require user input	
 						if varDisease in self.inheritanceGeneList[varGene] \
@@ -1860,11 +1893,13 @@ class charger(object):
 							elif charger.RECESSIVE in self.inheritanceGeneList[varGene][varDisease].lower() \
 							or charger.RECESSIVE in self.inheritanceGeneList[varGene][charger.allDiseases].lower():
 								var.PSC1 = True
-				else: 
-					# in case of no gene list, make all truncations PMC1
-					var.PMC1 = True
+				# in case of no gene list, make all truncations PMC1
+				var.PMC1 = not(var.PVS1 or var.PSC1)
 			elif (varClass in lenShift \
 			or varClass in vep_inframe):
+## TODO check not in repeat
+				if self.diseaseMechanismGeneList:
+					var.PM4 = True
 				if self.inheritanceGeneList:
 					if varGene in self.inheritanceGeneList: # check if in gene list
 						varDisease = var.disease # no disease field in MAF; may require user input	
@@ -1876,22 +1911,33 @@ class charger(object):
 							elif charger.RECESSIVE in self.inheritanceGeneList[varGene][varDisease].lower() \
 							or charger.RECESSIVE in self.inheritanceGeneList[varGene][charger.allDiseases].lower():
 								var.PPC1 = True
-				else: 
-					# in case of no gene list, make all inframes PPC1
-					var.PPC2 = True
+				# in case of no gene list, make all inframes PPC2
+				var.PPC2 = not(var.PM4 or var.PPC1)
 
-			if var.PVS1:
-				var.addSummary( "PVS1(" + str( varClass ) + " in susceptible gene " + str( varGene ) + ")" )
-			if var.PSC1:
-				var.addSummary( "PSC1(" + str( varClass ) + " recessive in gene " + str( varGene ) + ")" )
+			if self.diseaseMechanismGeneList:
+				if var.PVS1:
+					var.addSummary( "PVS1(" + str( varClass ) + " in gene with LOF a known mechanism of disease" + str( varGene ) + ")" )
+				if var.PSC1:
+					var.addSummary( "PSC1(" + str( varClass ) + " in gene with LOF not a known mechanism of disease" + str( varGene ) + ")" )
+			else:
+				if var.PVS1:
+					var.addSummary( "PVS1(" + str( varClass ) + " in susceptible gene " + str( varGene ) + ")" )
+				if var.PSC1:
+					var.addSummary( "PSC1(" + str( varClass ) + " recessive in gene " + str( varGene ) + ")" )
 			if var.PMC1:
-				var.addSummary( "PMC1(" + str( varClass ) + " no gene list but in gene " + str( varGene ) + ")" )
-			if var.PM4:
-				var.addSummary( "PM4(" + str( varClass ) + " in susceptible gene " + str( varGene ) + ")" )
-			if var.PPC1:
-				var.addSummary( "PPC1(" + str( varClass ) + " recessive in gene " + str( varGene ) + ")" )
+				var.addSummary( "PMC1(" + str( varClass ) + " no in gene list but in gene " + str( varGene ) + ")" )
+			if self.diseaseMechanismGeneList:
+				if var.PM4:
+					var.addSummary( "PM4(" + str( varClass ) + " in susceptible gene " + str( varGene ) + ")" )
+				if var.PPC1:
+					var.addSummary( "PPC1(" + str( varClass ) + " recessive in gene " + str( varGene ) + ")" )
+			else:
+				if var.PM4:
+					var.addSummary( "PM4(" + str( varClass ) + " in gene " + str( varGene ) + ")" )
+				if var.PPC1:
+					var.addSummary( "PPC1(" + str( varClass ) + " recessive in gene " + str( varGene ) + ")" )
 			if var.PPC2:
-				var.addSummary( "PPC2(" + str( varClass ) + " no gene list but in gene " + str( varGene ) + ")" )
+				var.addSummary( "PPC2(" + str( varClass ) + " no in gene list but in gene " + str( varGene ) + ")" )
 
 	def peptideChange( self , mod , **kwargs ):
 		called = 0
