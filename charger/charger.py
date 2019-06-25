@@ -1108,7 +1108,7 @@ class charger(object):
 				#sys.exit() 
 				# clinvarSet[var.uid] = var
 				key=var.chromosome + ":" + str(var.start)
-				clinvarSet[var.uid] = var
+				clinvarSet.setdefault(key, []).append(var)
 		print( "Have " + str( len( clinvarSet ) ) + " uid's from MacArthur ClinVar .tsv file: " + tsvfile )
 		return clinvarSet
 
