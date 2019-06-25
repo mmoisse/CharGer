@@ -40,8 +40,14 @@ class charger(object):
 			CharGer.characterize( )
 	'''
 	allDiseases = "all"
+	LOF = "LOF"
+	LOF_ACCEPTED = ["lof"]
+	MISSENSE = "missense"
+	MISSENSE_ACCEPTED = ["missense"]
 	DOMINANT = "dominant"
+	DOMINANT_ACCEPTED = ["dominant","ad"]
 	RECESSIVE = "recessive"
+	RECESSIVE_ACCEPTED = ["recessive","ar"]
 	def __init__( self , **kwargs ):
 		self.userVariants = kwargs.get( 'variants' , [] )   # (rjm) list of variants of class chargervariant
 		self.pathogenicVariants = kwargs.get( 'pathogenic' , AV({}) )
@@ -638,48 +644,38 @@ class charger(object):
 		if clinical:
 			clinvarDone = True
 			sigs = clinical.split( "&" )
+			sigs = [x.lower() for x in sigs]
 			description = sigs[0]
-			if description == "uncertain":
-				description = chargervariant.uncertain
-			elif description == "benign":
-				description = chargervariant.benign
-			elif description == "likely_benign":
-				description = chargervariant.likelyBenign
-			elif description == "likely_pathogenic":
-				description = chargervariant.likelyPathogenic
-			elif description == "pathogenic":
-				description = chargervariant.pathogenic
+			# print("sigs " + str(sigs))
+
+			description = []
 			for sig in sigs:
-				if sig == "uncertain":
-					description = chargervariant.uncertain
-					break
-				if sig == "benign":
-					if description == chargervariant.pathogenic or description == chargervariant.likelyPathogenic:
-						description = chargervariant.uncertain
-						break
-					if description == chargervariant.likelyBenign:
-						description = chargervariant.benign
-						continue
-				if sig == "likely_benign":
-					if description == chargervariant.likelyPathogenic or description == chargervariant.pathogenic:
-						description = chargervariant.uncertain
-						break
-					if description == chargervariant.benign:
-						continue
+				if sig in chargervariant.uncertain_list:
+					description.append(0)
+				elif sig in chargervariant.benign_list:
+					description.append(-2)
+				elif sig in chargervariant.likelyBenign_list:
+					description.append(-1)
+				elif sig in chargervariant.likelyPathogenic_list:
+					description.append(1)
+				elif sig in chargervariant.pathogenic_list:
+					description.append(2)
+				else:
+					print("failed")
+			if len(description) < 1:
+				description = chargervariant.uncertain
+			elif all(i >= 0 for i in description):
+				if all(i >= 2 or i == 0 for i in description):
+					description = chargervariant.pathogenic
+				else:
+					description = chargervariant.likelyPathogenic
+			elif all(i <= 0 for i in description):
+				if all(i <= -2 or i == 0 for i in description):
+					description = chargervariant.benign
+				else:
 					description = chargervariant.likelyBenign
-				if sig == "likely_pathogenic":
-					if description == chargervariant.benign or description == chargervariant.likelyBenign:
-						description = chargervariant.uncertain
-						break
-					if description == chargervariant.pathogenic:
-						continue
-				if sig == "pathogenic":
-					if description == chargervariant.benign or description == chargervariant.likelyBenign:
-						description = chargervariant.uncertain
-						break
-					if description == chargervariant.likelyPathogenic:
-						description = chargervariant.pathogenic
-						continue
+			else:
+				description = chargervariant.uncertain
 		var.clinical["description"] = description
 		var.clinvarVariant.clinical["description"] = description
 		var.clinical["review_status"] = ""
@@ -1051,12 +1047,16 @@ class charger(object):
 			isPathogenic = 1
 		elif int(isPathogenic) >= 1:
 			isPathogenic = 1
+		else:
+			isPathogenic = 0
 
 		isBenign = fields[header.index("benign")]
 		if isBenign == "1;0": 
 			isBenign = 1
 		elif int(isBenign) >= 1:
 			isBenign = 1
+		else:
+			isBenign = 0
 
 		isConflicted = fields[header.index("conflicted")]
 		if isConflicted == "1;0":
