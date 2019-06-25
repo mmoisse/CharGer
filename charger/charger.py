@@ -929,10 +929,10 @@ class charger(object):
 					disease = fields[1].rstrip()
 				else: #set the gene to match all disease
 					disease = charger.allDiseases
-				mode_inheritance = fields[2].rstrip()
-				if ( charger.DOMINANT in mode_inheritance ):
+				mode_inheritance = fields[2].rstrip().lower()
+				if ( mode_inheritance in charger.DOMINANT_ACCEPTED ):
 					self.inheritanceGeneList[gene][disease] = charger.DOMINANT
-				if ( charger.RECESSIVE in mode_inheritance ):
+				if ( mode_inheritance in charger.RECESSIVE_ACCEPTED ):
 					self.inheritanceGeneList[gene][disease] = charger.RECESSIVE
 				#print '\t'.join( [ gene , disease , mode_inheritance ] )
 			inFile.close()
