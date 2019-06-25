@@ -202,9 +202,11 @@ class charger(object):
 		"""
 		inFile = None
 		if ( re.match( "\.gz" , inputFile ) ):
-			inFile = vcf.Reader( open( inputFile , 'r' ) , compressed=True )    
+			inFile = vcf.Reader( open( inputFile , 'r' ) , compressed=True,
+					strict_whitespace=True )  
 		else:
-			inFile = vcf.Reader( open( inputFile , 'r' ) )
+			inFile = vcf.Reader( open( inputFile , 'r' ),
+					strict_whitespace=True )
 		variantDict = {}
 		appendTo = kwargs.get( "appendTo" , "" )
 		anyFilter = kwargs.get( "anyFilter" , False )
