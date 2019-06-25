@@ -596,12 +596,27 @@ class charger(object):
 			csq_terms = self.getVCFKeyIndex( values , "Consequence" ).split( "&" )
 		return csq_terms
 
+	## Gnomad frequencies
+	## Field changes since VEP 90 https://github.com/Clinical-Genomics/scout/issues/733
 	def getExAC_MAF( self , values , var ):
 		#if the .vcf does not have AF
 		#then check for ExAC_MAF
 		if ( var.alleleFrequency is not None ):
-			emaf = self.getVCFKeyIndex( values , "ExAC_MAF" )
+			if "ExAC_MAF" in self.vcfKeyIndex:
+				emaf = self.getVCFKeyIndex( values , "ExAC_MAF" )
+				versionVEP=89
+			elif "gnomAD_AF" in self.vcfKeyIndex:
+				emaf = self.getVCFKeyIndex( values , "gnomAD_AF" )
+				versionVEP=90
+			else:
+				print("Unsupported VEP version")
+				return False
 			if emaf is not None:
+				if len(emaf)==0:
+					return False
+				if len(emaf)>0 and versionVEP>=90:
+					var.alleleFrequency = emaf
+					return True
 				for alt in emaf.split( "&" ):
 					if alt == var.alternate:
 						parts = emaf.split( ":" )
@@ -610,10 +625,25 @@ class charger(object):
 							return True
 		return False
 
+	## 1KG frequencies
+	## Field changes since VEP 90 https://github.com/Clinical-Genomics/scout/issues/733
 	def getGMAF( self , values , var ):
 		if ( var.alleleFrequency is not None ):
-			gmaf = self.getVCFKeyIndex( values , "GMAF" )
+			if "GMAF" in self.vcfKeyIndex:
+				gmaf = self.getVCFKeyIndex( values , "GMAF" )
+				versionVEP=89
+			elif "AF" in self.vcfKeyIndex:
+				gmaf = self.getVCFKeyIndex( values , "AF" )
+				versionVEP=90
+			else:
+				print("Unsupported VEP version")
+				return False
 			if gmaf is not None:
+				if len(gmaf)==0:
+					return False
+				if len(gmaf)>0 and versionVEP>=90:
+					var.alleleFrequency = gmaf
+					return True
 				for alt in gmaf.split( "&" ):
 					if alt == var.alternate:
 						parts = gmaf.split( ":" )
