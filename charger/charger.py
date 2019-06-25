@@ -149,11 +149,11 @@ class charger(object):
 		if inheritanceGeneListFile:
 			self.readModesGeneList( inheritanceGeneListFile , specific=specific )
 		else:
-			print "No gene list file uploaded. CharGer will not make PVS1 calls."
+			print("No gene list file uploaded. CharGer will not make PVS1 calls.")
 		if PP2GeneListFile:
 			self.readPP2GeneList( PP2GeneListFile )
 		else:
-			print "No PP2 gene list file uploaded. CharGer will not make PP2 calls."
+			print("No PP2 gene list file uploaded. CharGer will not make PP2 calls.")
 		if BP1GeneListFile:
 			self.readBP1GeneList( BP1GeneListFile )
 		else:
@@ -631,7 +631,7 @@ class charger(object):
 								i = i + 1
 		for i in infos.items():
 			if i[0] == 'AF':
-				print "This .vcf has AF!"
+				print( "This .vcf has AF!" )
 				exacDone = True
 			if i[0] == 'clinvar_measureset_id':
 				print( "This .vcf has ClinVar annotations!" )
@@ -1149,7 +1149,7 @@ class charger(object):
 		doREST = kwargs.get( 'rest' , False )
 		vepScript = kwargs.get( 'vepScript' , "" )
 		if doVEP:
-			sys.stdout.write( "charger::getVEP " )
+			print( "charger::getVEP " )
 			if not vepScript:
 				print( "through BioMine ReST" )
 				self.getVEPviaREST( **kwargs )
