@@ -1847,6 +1847,7 @@ class charger(object):
 #		print "- "
 	def PP5( self ):
 		print "CharGer module PP5: not yet implemented"
+		self.peptideChange( "PP5" )
 #		print "- "
 	def PPC1( self ):
 		print "CharGer module PPC1"
@@ -1952,10 +1953,14 @@ class charger(object):
 				call = var.PS1
 			if mod == "PM5":
 				call = var.PM5
+			if mod == "PP5":
+				call = var.PP5
 			if mod == "BSC1":
 				call = var.BSC1
 			if mod == "BMC1":
 				call = var.BMC1
+			if mod == "BP6":
+				call = var.BP6
 			if not call: #is already true
 				CVchecked = 0
 				PVchecked = 0
@@ -1976,10 +1981,14 @@ class charger(object):
 				var.addSummary( "PS1(Peptide change is known pathogenic)" )
 			if var.PM5 and mod == "PM5":
 				var.addSummary( "PM5(Peptide change at the same location of a known pathogenic change)" )
+			if var.PP5 and mod == "PP5":
+				var.addSummary( "PP5(Variant reported as pathogenic)" )
 			if var.BSC1 and mod == "BSC1":
 				var.addSummary( "BSC1(Peptide change is known benign)" )
 			if var.BMC1 and mod == "BMC1":
 				var.addSummary( "BMC1(Peptide change at the same location of a known benign change)" )
+			if var.BP6 and mod == "BP6":
+				var.addSummary( "BP6(Variant reported as benign)" )
 		if mod == "PS1" or mod == "PM5":
 			print mod + " found " + str(called) + " pathogenic variants"
 		if mod == "BSC1" or mod == "BMC1":
@@ -1992,26 +2001,30 @@ class charger(object):
 			clinvarVar = var.clinvarVariant
 			clin = clinvarVar.clinical
 			if consequence.sameGenomicVariant( clinvarVar ):
-				#if genomic change is the same, then PS1
-				if clin["description"] == clinvarvariant.benign:
-					if mod == "BSC1":
+				#if genomic change is the same, then PP5
+				if clin["description"] == clinvarvariant.benign or \
+					clin["description"] == clinvarvariant.likelyBenign:
+					if mod == "BP6":
 						#print( "also BSC1 via samGenomicVariant" )
-						var.BSC1 = True # already pathogenic still suffices to be BSC1
+						var.BP6 = True # already pathogenic still suffices to be BSC1
 						called = 1
-				if clin["description"] == clinvarvariant.pathogenic:
-					if mod == "PS1":
+				if clin["description"] == clinvarvariant.pathogenic or \
+					clin["description"] == clinvarvariant.likelyPathogenic:
+					if mod == "PP5":
 						#print( "also PS1 via samGenomicVariant" )
-						var.PS1 = True # already pathogenic still suffices to be PS1
+						var.PP5 = True # already pathogenic still suffices to be PS1
 						called = 1
 			elif consequence.samePeptideChange( clinvarVar ):
 			#if genomic change is different, but the peptide change is the same, then PS1
 				if clinvarVar.alternatePeptide == consequence.alternatePeptide: #same amino acid change
-					if clin["description"] == clinvarvariant.benign:
+					if clin["description"] == clinvarvariant.benign or \
+						clin["description"] == clinvarvariant.likelyBenign:
 						if mod == "BSC1":
 							#print( "also BSC1 via sameGenomicReference" )
 							var.BSC1 = True
 							called = 1
-					if clin["description"] == clinvarvariant.pathogenic:
+					if clin["description"] == clinvarvariant.pathogenic or \
+						clin["description"] == clinvarvariant.likelyPathogenic:
 						if mod == "PS1":
 							#print( "also PS1 via sameGenomicReference" )
 							var.PS1 = True
@@ -2020,12 +2033,14 @@ class charger(object):
 				if not consequence.samePeptideChange( clinvarVar ):
 				#if peptide change is different, but the peptide reference is the same, then PM5
 					if consequence.plausibleCodonFrame( clinvarVar ):
-						if clin["description"] == clinvarvariant.benign:
+						if clin["description"] == clinvarvariant.benign or \
+							clin["description"] == clinvarvariant.likelyBenign:
 							if mod == "BMC1":
 								#print( "also PS5 via plausibleCodonFrame" )
 								var.BMC1 = True # already benign still suffices to be BSC1
 								called = 1
-						if clin["description"] == clinvarvariant.pathogenic:
+						if clin["description"] == clinvarvariant.pathogenic or \
+							clin["description"] == clinvarvariant.likelyPathogenic:
 							if mod == "PM5":
 								#print( "also PS5 via plausibleCodonFrame" )
 								var.PM5 = True # already pathogenic still suffices to be PS1
@@ -2157,6 +2172,7 @@ class charger(object):
 	def BP6( self ):
 		print "CharGer module BP6: not yet implemented"
 		#Reputable source recently reports variant as benign, but the evidence is not available to the laboratory to perform an independent evaluation
+		self.peptideChange( "BP6" )
 	def BP7( self ):
 		print "CharGer module BP7: not yet implemented"
 		#A synonymous (silent) variant for which splicing prediction algorithms predict no impact to the splice consensus sequence nor the creation of a new splice site AND the nucleotide is not highly conserved
