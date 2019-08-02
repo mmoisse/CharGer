@@ -362,7 +362,7 @@ class charger(object):
 				values = thisCSQ.split( "|" )
 				aas = self.getRefAltAminoAcids( values , var , preVEP )
 				positionPeptide = self.getCodingPosition( values , var , preVEP , "Protein_position" )
-				positionCodon = self.getCodingPosition( values , var , preVEP , "cDNA_position" )
+				positionCodon = self.getCodingPosition( values , var , preVEP , "CDS_position" )
 				exons = self.getExons( values )
 				introns = self.getIntrons( values )
 				siftStuff = self.getSIFT( values )
@@ -655,7 +655,7 @@ class charger(object):
 	def readMetaData( self , metadata , infos , vepInfo ):
 		vepDone = False
 		exacDone = False
-		clinvarDone = True
+		clinvarDone = False
 		for pairs in metadata:
 			if pairs == 'VEP':
 				print "This .vcf has VEP annotations!"
